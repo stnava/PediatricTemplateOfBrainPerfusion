@@ -5,9 +5,18 @@ library(e1071)
 thickinds<-c(1:36,39:40,43:70,79:90)
 thickinds<-c(1:70,79:90)
 demog<-read.csv("AAL_demo_thickness.csv")
+cbf<-read.csv("AAL_meancbf.csv")
+demog<-cbind( demog, cbf[,4:ncol(cbf)] )
+thickoff<-23
+cthk<-apply( demog[  , thickinds+thickoff ], MARGIN=1, FUN=mean )
+cbfoff<-23+102
+gcbf<-apply( demog[  , thickinds+cbfoff ], MARGIN=1, FUN=mean )
 demog$Sex[ demog$Sex == "F " ]<-"F"
 usesubs<-rep(TRUE,nrow(demog))
-usesubs[ c(155,142) ] <- FALSE
+usesubs[ c(155,142) ] <- FALSE      # for thickness
+usesubs[ c(155,142,which( is.na(gcbf) ),which( gcbf < 10  )) ] <- FALSE  # for cbf
+tempdf<-data.frame( cbind( demog, usesubs ) )
+write.csv(tempdf,"good_v_bad_cbf_subjects.csv",quote=F,row.names=F)
 uids <- unique( demog$SubID )
 for ( i in 1:length(uids) )
   {
@@ -15,6 +24,8 @@ for ( i in 1:length(uids) )
   if ( length( ww ) > 1 ) usesubs[ ww[2:length(ww)] ] <- FALSE
   }
 demog<-demog[usesubs,]
+cthk<-apply( demog[  , thickinds+thickoff ], MARGIN=1, FUN=mean )
+gcbf<-apply( demog[  , thickinds+cbfoff ], MARGIN=1, FUN=mean )
 inclevs<-levels( demog$Income )
 inclevs[1]<-NA
 inclevs[2:6]<-110.0
@@ -35,8 +46,15 @@ inclevs[30:31]<-20.0
 inclevs<-as.numeric( inclevs )
 levels( demog$Income )<-( inclevs )
 demog$Income<-as.numeric( as.character( demog$Income ) )
+demog<-data.frame( demog , myincome=(myincome) , gcbf=gcbf, tgcbf=(gcbf/cthk) )
+residagainstthickness<-FALSE 
+if ( residagainstthickness ) demog[  , thickinds+cbfoff ]<-as.matrix( residuals( lm( as.matrix(demog[  , thickinds+cbfoff ]) ~ cthk ) ) )
+mdl<-lm( gcbf ~ AgeAtScan * Sex + myincome  , data=mydf )
+print( summary( mdl  ) )
+pdf("~/Downloads/cbf_v_income.pdf")
+visreg( mdl , "myincome", main="CBF vs Income" )
+dev.off()
 ####################################################################################################
-thickoff<-23
 demog$AgeAtScan <- as.numeric(as.character(demog$AgeAtScan))
 myincome<-c( impute( cbind(demog$blank,demog$Income ) ) )
 myiq<-( c( impute( cbind( demog$blank, as.numeric(as.character(demog$FullScaleIQ)) ) ) ) )
@@ -44,11 +62,13 @@ myiq2<-( c( impute( cbind( demog$blank, as.numeric(as.character(demog$Verbal.IQ)
 mylad<-c( impute( cbind( demog$blank, as.numeric(as.character(demog$Teen.Ladder.SES.score ) )   ) ) )
 myladc<-c( impute( cbind( demog$blank, as.numeric(as.character(demog$Teen.Ladder.Community.Score ) )   ) ) )
 ####################################################################################################
+myoffset<-cbfoff
+myoffset<-thickoff
 if ( FALSE ) {
 # look at k = 5 !
 for ( k in 1:length(thickinds) ) 
   {
-  mdl<-lm( demog[,thickinds[k]+thickoff] ~ 1 + Sex*AgeAtScan +    I(AgeAtScan^2) + myiq  , data = demog  )
+  mdl<-lm( demog[,thickinds[k]+myoffset] ~ 1 + Sex*AgeAtScan +    I(AgeAtScan^2) + myiq  , data = demog  )
   dd<-stepAIC( mdl , direction = c("both") , trace =  0 )
   print(summary( lm( formula(dd) , data=demog ) ) )
   print( paste( k, aal$label_name[thickinds][k] ) )
@@ -63,14 +83,16 @@ myincome2[ myincome <= 90 ]<- 4
 myincome2[ myincome <= 70 ]<- 3
 myincome2[ myincome <= 50 ]<- 2
 myincome2[ myincome <= 20 ]<- 1
-bvol<-apply( demog[  , thickinds+thickoff ], MARGIN=1, FUN=mean )
-mythk<-as.matrix( cbind( demog[,thickinds+thickoff] ) )
-mythk<-residuals( lm( mythk ~  demog$Sex * demog$AgeAtScan + bvol ) ) #
+bvol<-apply( demog[  , thickinds+myoffset ], MARGIN=1, FUN=mean )
+mythk<-as.matrix( cbind( demog[,thickinds+myoffset] ) )
+mythk<-residuals( lm( mythk ~  demog$Sex * demog$AgeAtScan + cthk ) ) 
 tempinc<-cbind(  as.numeric( myiq ) ,as.numeric( myiq2 ) , as.numeric( myincome ) , as.numeric(myincome2), as.numeric( mylad ) , myladc  )
 nv<-3
 if ( ! exists("np") ) np<-2500
+sparval<-( 0.1 )
+# if ( myoffset == thickoff ) sparval<-0.05
 sccan<-sparseDecom2( inmatrix=list( mythk, as.matrix(tempinc) ) , nvecs=nv, robust=0,
-                    its=33, mycoption=1 ,  perms=np, sparseness=c( 0.05 , 0.34 ), z=-1, ell1=11 )
+                    its=40, mycoption=1 ,  perms=np, sparseness=c( sparval , 0.3 ), z=1, ell1=11 ) # cbf
 print( aal$label_name[thickinds][ abs(sccan$eig1[,1]) > 0 ] )
 print("&")
 print( aal$label_name[thickinds][ abs(sccan$eig1[,2]) > 0 ] )

@@ -1,4 +1,5 @@
 library(ANTsR)
+library(visreg)
 data('aal',package='ANTsR')
 library(pheatmap)
 library(e1071)
@@ -16,7 +17,7 @@ usesubs<-rep(TRUE,nrow(demog))
 usesubs[ c(155,142) ] <- FALSE      # for thickness
 usesubs[ c(155,142,which( is.na(gcbf) ),which( gcbf < 10  )) ] <- FALSE  # for cbf
 tempdf<-data.frame( cbind( demog, usesubs ) )
-write.csv(tempdf,"good_v_bad_cbf_subjects.csv",quote=F,row.names=F)
+write.csv(tempdf,"good_v_bad_cbf_subjects.csv",row.names=F)
 uids <- unique( demog$SubID )
 for ( i in 1:length(uids) )
   {
@@ -46,36 +47,7 @@ inclevs[30:31]<-20.0
 inclevs<-as.numeric( inclevs )
 levels( demog$Income )<-( inclevs )
 demog$Income<-as.numeric( as.character( demog$Income ) )
-demog<-data.frame( demog , myincome=(myincome) , gcbf=gcbf, tgcbf=(gcbf/cthk) )
-residagainstthickness<-FALSE 
-if ( residagainstthickness ) demog[  , thickinds+cbfoff ]<-as.matrix( residuals( lm( as.matrix(demog[  , thickinds+cbfoff ]) ~ cthk ) ) )
-mdl<-lm( gcbf ~ AgeAtScan * Sex + myincome  , data=mydf )
-print( summary( mdl  ) )
-pdf("~/Downloads/cbf_v_income.pdf")
-visreg( mdl , "myincome", main="CBF vs Income" )
-dev.off()
-####################################################################################################
-demog$AgeAtScan <- as.numeric(as.character(demog$AgeAtScan))
 myincome<-c( impute( cbind(demog$blank,demog$Income ) ) )
-myiq<-( c( impute( cbind( demog$blank, as.numeric(as.character(demog$FullScaleIQ)) ) ) ) )
-myiq2<-( c( impute( cbind( demog$blank, as.numeric(as.character(demog$Verbal.IQ)) ) ) ) )
-mylad<-c( impute( cbind( demog$blank, as.numeric(as.character(demog$Teen.Ladder.SES.score ) )   ) ) )
-myladc<-c( impute( cbind( demog$blank, as.numeric(as.character(demog$Teen.Ladder.Community.Score ) )   ) ) )
-####################################################################################################
-myoffset<-cbfoff
-myoffset<-thickoff
-if ( FALSE ) {
-# look at k = 5 !
-for ( k in 1:length(thickinds) ) 
-  {
-  mdl<-lm( demog[,thickinds[k]+myoffset] ~ 1 + Sex*AgeAtScan +    I(AgeAtScan^2) + myiq  , data = demog  )
-  dd<-stepAIC( mdl , direction = c("both") , trace =  0 )
-  print(summary( lm( formula(dd) , data=demog ) ) )
-  print( paste( k, aal$label_name[thickinds][k] ) )
-  Sys.sleep(3)
-  }
-}
-####################################################################################################
 myincome2<-myincome
 myincome2[ myincome >= 120 ]<-6
 myincome2[ myincome <= 120 ]<-5
@@ -83,16 +55,44 @@ myincome2[ myincome <= 90 ]<- 4
 myincome2[ myincome <= 70 ]<- 3
 myincome2[ myincome <= 50 ]<- 2
 myincome2[ myincome <= 20 ]<- 1
-bvol<-apply( demog[  , thickinds+myoffset ], MARGIN=1, FUN=mean )
-mythk<-as.matrix( cbind( demog[,thickinds+myoffset] ) )
+demog<-data.frame( demog , myincome=(myincome) , gcbf=gcbf, tgcbf=(gcbf/cthk) )
+residagainstthickness<-FALSE 
+if ( residagainstthickness ) demog[  , thickinds+cbfoff ]<-as.matrix( residuals( lm( as.matrix(demog[  , thickinds+cbfoff ]) ~ cthk ) ) )
+mdl<-lm( gcbf ~ AgeAtScan * Sex + myincome  , data=demog )
+print( summary( mdl  ) )
+pdf("~/Downloads/cbf_v_income.pdf")
+visreg( mdl , "myincome", main="CBF vs Income" )
+dev.off()
+####################################################################################################
+demog$AgeAtScan <- as.numeric(as.character(demog$AgeAtScan))
+myiq<-rank( c( impute( cbind( demog$blank, as.numeric(as.character(demog$FullScaleIQ)) ) ) ) )
+myiq2<-rank( c( impute( cbind( demog$blank, as.numeric(as.character(demog$Verbal.IQ)) ) ) ) )
+mylad<-c( impute( cbind( demog$blank, as.numeric(as.character(demog$Teen.Ladder.SES.score ) )   ) ) )
+myladc<-c( impute( cbind( demog$blank, as.numeric(as.character(demog$Teen.Ladder.Community.Score ) )   ) ) )
+####################################################################################################
+myoffset<-cbfoff
+myoffset<-thickoff
+mystudyinds<-c(thickinds+cbfoff,thickinds+thickoff)
+if ( FALSE ) {
+# look at k = 5 !
+for ( k in 1:length(mystudyinds) ) 
+  {
+  mdl<-lm( demog[,mystudyinds[k]] ~ 1 + Sex*AgeAtScan +    I(AgeAtScan^2) + myiq  , data = demog  )
+  dd<-stepAIC( mdl , direction = c("both") , trace =  0 )
+  print(summary( lm( formula(dd) , data=demog ) ) )
+  print( paste( k, aal$label_name[mystudyinds][k] ) )
+  Sys.sleep(3)
+  }
+}
+####################################################################################################
+mythk<-as.matrix( cbind( demog[,mystudyinds] ) )
 mythk<-residuals( lm( mythk ~  demog$Sex * demog$AgeAtScan + cthk ) ) 
 tempinc<-cbind(  as.numeric( myiq ) ,as.numeric( myiq2 ) , as.numeric( myincome ) , as.numeric(myincome2), as.numeric( mylad ) , myladc  )
 nv<-3
 if ( ! exists("np") ) np<-2500
-sparval<-( 0.1 )
-# if ( myoffset == thickoff ) sparval<-0.05
+sparval<-( 0.05 )
 sccan<-sparseDecom2( inmatrix=list( mythk, as.matrix(tempinc) ) , nvecs=nv, robust=0,
-                    its=40, mycoption=1 ,  perms=np, sparseness=c( sparval , 0.3 ), z=1, ell1=11 ) # cbf
+                    its=40, mycoption=1 ,  perms=np, sparseness=c( sparval , 0.34 ), z=-1, ell1=11 ) # cbf
 print( aal$label_name[thickinds][ abs(sccan$eig1[,1]) > 0 ] )
 print("&")
 print( aal$label_name[thickinds][ abs(sccan$eig1[,2]) > 0 ] )

@@ -1,0 +1,118 @@
+<!DOCTYPE html> 
+<meta charset="utf-8">
+<body> 
+ <style> 
+.link {  
+stroke: #666;
+opacity: 0.9;
+stroke-width: 1.5px; 
+} 
+.node circle { 
+stroke: #fff; 
+opacity: 0.9;
+stroke-width: 1.5px; 
+} 
+.node:not(:hover) .nodetext {
+display: none;
+}
+text { 
+font: 7px serif; 
+opacity: 0.9;
+pointer-events: none; 
+} 
+</style> 
+
+<script src=http://d3js.org/d3.v3.min.js></script>
+
+<script> 
+ var links = [ { "source" : 0, "target" : 23, "value" : 3.55567689760092 }, { "source" : 0, "target" : 24, "value" : 3.08539935004814 }, { "source" : 0, "target" : 46, "value" : 3.34020061147086 }, { "source" : 0, "target" : 47, "value" : 4.44729880436607 }, { "source" : 0, "target" : 51, "value" : 3.55567689760092 }, { "source" : 0, "target" : 70, "value" : 3.55567689760092 }, { "source" : 0, "target" : 71, "value" : 3.04916162919415 }, { "source" : 0, "target" : 72, "value" : 3.55567689760092 }, { "source" : 0, "target" : 73, "value" : 3.34020061147086 }, { "source" : 0, "target" : 74, "value" : 3.55567689760092 }, { "source" : 0, "target" : 77, "value" : 3.55567689760092 }, { "source" : 0, "target" : 84, "value" : 3.144265750423 }, { "source" : 0, "target" : 86, "value" : 3.04916162919415 }, { "source" : 0, "target" : 104, "value" : 3.04916162919415 }, { "source" : 0, "target" : 105, "value" : 3.04916162919415 }, { "source" : 0, "target" : 124, "value" : 3.04916162919415 }, { "source" : 0, "target" : 125, "value" : 3.34020061147086 }, { "source" : 0, "target" : 128, "value" : 3.04916162919415 }, { "source" : 0, "target" : 129, "value" : 3.55567689760092 }, { "source" : 0, "target" : 130, "value" : 3.04916162919415 }, { "source" : 0, "target" : 150, "value" : 3.55567689760092 }, { "source" : 0, "target" : 152, "value" : 3.55567689760092 }, { "source" : 0, "target" : 156, "value" : 3.55567689760092 }, { "source" : 0, "target" : 162, "value" : 3.04916162919415 }, { "source" : 1, "target" : 34, "value" : 3.0494737509925 }, { "source" : 1, "target" : 84, "value" : 3.89866070654725 }, { "source" : 1, "target" : 85, "value" : 3.0494737509925 }, { "source" : 1, "target" : 86, "value" : 3.44239420255281 }, { "source" : 1, "target" : 87, "value" : 3.24076258016692 }, { "source" : 1, "target" : 88, "value" : 3.0494737509925 }, { "source" : 1, "target" : 90, "value" : 3.24076258016692 }, { "source" : 1, "target" : 92, "value" : 3.1422346691163 }, { "source" : 1, "target" : 94, "value" : 3.27373141572921 }, { "source" : 1, "target" : 95, "value" : 3.89866070654725 }, { "source" : 1, "target" : 96, "value" : 3.76494790772506 }, { "source" : 1, "target" : 97, "value" : 3.06003908784058 }, { "source" : 1, "target" : 100, "value" : 3.42936120584589 }, { "source" : 1, "target" : 101, "value" : 3.77292251989712 }, { "source" : 1, "target" : 102, "value" : 3.89866070654725 }, { "source" : 1, "target" : 103, "value" : 4.8599490211215 }, { "source" : 1, "target" : 109, "value" : 3.44239420255281 }, { "source" : 1, "target" : 110, "value" : 3.24076258016692 }, { "source" : 1, "target" : 112, "value" : 3.89866070654725 }, { "source" : 1, "target" : 113, "value" : 3.89866070654725 }, { "source" : 1, "target" : 116, "value" : 3.67130297593495 }, { "source" : 1, "target" : 117, "value" : 5.22611157073405 }, { "source" : 1, "target" : 118, "value" : 3.77292251989712 }, { "source" : 1, "target" : 119, "value" : 3.24604394481895 }, { "source" : 1, "target" : 120, "value" : 3.36318095649278 }, { "source" : 1, "target" : 121, "value" : 3.27373141572921 }, { "source" : 1, "target" : 130, "value" : 3.44239420255281 }, { "source" : 1, "target" : 131, "value" : 3.03679017761579 }, { "source" : 1, "target" : 139, "value" : 3.76494790772506 }, { "source" : 1, "target" : 146, "value" : 3.53201770291016 }, { "source" : 1, "target" : 147, "value" : 3.89866070654725 }, { "source" : 1, "target" : 149, "value" : 3.89866070654725 }, { "source" : 1, "target" : 150, "value" : 3.44239420255281 }, { "source" : 1, "target" : 152, "value" : 3.24604394481895 }, { "source" : 1, "target" : 155, "value" : 3.63173298365244 }, { "source" : 1, "target" : 158, "value" : 3.44239420255281 }, { "source" : 1, "target" : 163, "value" : 3.73008869648707 }, { "source" : 3, "target" : 57, "value" : 3.41075008463119 }, { "source" : 3, "target" : 84, "value" : 3.49643436539999 }, { "source" : 3, "target" : 94, "value" : 3.24110685728766 }, { "source" : 3, "target" : 96, "value" : 3.21804477910004 }, { "source" : 3, "target" : 98, "value" : 3.41075008463119 }, { "source" : 3, "target" : 99, "value" : 3.15573283368165 }, { "source" : 3, "target" : 100, "value" : 3.71213960959548 }, { "source" : 3, "target" : 112, "value" : 3.49643436539999 }, { "source" : 3, "target" : 114, "value" : 3.12160337680683 }, { "source" : 3, "target" : 117, "value" : 3.41075008463119 }, { "source" : 3, "target" : 121, "value" : 3.41075008463119 }, { "source" : 3, "target" : 125, "value" : 3.20540043862418 }, { "source" : 3, "target" : 126, "value" : 3.41075008463119 }, { "source" : 3, "target" : 127, "value" : 3.2349270735429 }, { "source" : 3, "target" : 134, "value" : 3.49643436539999 }, { "source" : 3, "target" : 135, "value" : 3.49643436539999 }, { "source" : 3, "target" : 136, "value" : 3.49643436539999 }, { "source" : 3, "target" : 140, "value" : 3.41075008463119 }, { "source" : 3, "target" : 141, "value" : 3.13941360433548 }, { "source" : 3, "target" : 142, "value" : 3.41075008463119 }, { "source" : 3, "target" : 143, "value" : 3.49643436539999 }, { "source" : 3, "target" : 144, "value" : 3.13941360433548 }, { "source" : 3, "target" : 150, "value" : 3.49643436539999 }, { "source" : 3, "target" : 151, "value" : 3.27668659639391 }, { "source" : 3, "target" : 152, "value" : 3.49643436539999 }, { "source" : 3, "target" : 155, "value" : 3.13941360433548 }, { "source" : 3, "target" : 156, "value" : 3.49643436539999 }, { "source" : 3, "target" : 158, "value" : 3.80796538819687 }, { "source" : 4, "target" : 11, "value" : 5.09176640041964 }, { "source" : 4, "target" : 18, "value" : 3.03243833886889 }, { "source" : 4, "target" : 22, "value" : 3.4290048441526 }, { "source" : 4, "target" : 24, "value" : 5.49667669116665 }, { "source" : 4, "target" : 25, "value" : 3.9492358363299 }, { "source" : 4, "target" : 39, "value" : 3.75746072513188 }, { "source" : 4, "target" : 46, "value" : 3.71526348071883 }, { "source" : 4, "target" : 47, "value" : 3.66698978804893 }, { "source" : 4, "target" : 60, "value" : 3.4290048441526 }, { "source" : 4, "target" : 61, "value" : 5.09176640041964 }, { "source" : 4, "target" : 68, "value" : 7.05416775148752 }, { "source" : 4, "target" : 69, "value" : 6.3948567349222 }, { "source" : 4, "target" : 70, "value" : 4.3433469546515 }, { "source" : 4, "target" : 71, "value" : 3.4290048441526 }, { "source" : 4, "target" : 121, "value" : 3.3688289548491 }, { "source" : 4, "target" : 160, "value" : 3.6906789140525 }, { "source" : 4, "target" : 162, "value" : 3.3688289548491 }, { "source" : 5, "target" : 65, "value" : 3.0212264553988 }, { "source" : 5, "target" : 77, "value" : 3.04242396108358 }, { "source" : 5, "target" : 84, "value" : 3.1289756157955 }, { "source" : 5, "target" : 98, "value" : 3.04242396108358 }, { "source" : 5, "target" : 100, "value" : 3.1289756157955 }, { "source" : 5, "target" : 117, "value" : 3.1289756157955 }, { "source" : 5, "target" : 121, "value" : 3.1289756157955 }, { "source" : 5, "target" : 125, "value" : 3.1289756157955 }, { "source" : 5, "target" : 126, "value" : 3.1289756157955 }, { "source" : 5, "target" : 127, "value" : 3.04242396108358 }, { "source" : 5, "target" : 134, "value" : 3.1289756157955 }, { "source" : 5, "target" : 135, "value" : 3.1289756157955 }, { "source" : 5, "target" : 136, "value" : 3.1289756157955 }, { "source" : 5, "target" : 140, "value" : 3.04242396108358 }, { "source" : 5, "target" : 143, "value" : 3.1289756157955 }, { "source" : 5, "target" : 150, "value" : 3.1289756157955 }, { "source" : 5, "target" : 151, "value" : 3.0212264553988 }, { "source" : 5, "target" : 152, "value" : 3.1289756157955 }, { "source" : 5, "target" : 156, "value" : 3.1289756157955 }, { "source" : 5, "target" : 158, "value" : 4.06741046074501 } ] ; 
+ var nodes = [ { "name" : "IQ", "group" : 1 }, { "name" : "RIncome", "group" : 2 }, { "name" : "Ladder", "group" : 3 }, { "name" : "demog$SexM", "group" : 4 }, { "name" : "I(demog$AgeAtScan^1)", "group" : 5 }, { "name" : "demog$SexM:I(demog$AgeAtScan^1)", "group" : 6 }, { "name" : "Thick Precentral_L", "group" : 7 }, { "name" : "Thick Precentral_R", "group" : 7 }, { "name" : "Thick Frontal_Sup_L", "group" : 7 }, { "name" : "Thick Frontal_Sup_R", "group" : 7 }, { "name" : "Thick Frontal_Sup_Orb_L", "group" : 7 }, { "name" : "Thick Frontal_Sup_Orb_R", "group" : 7 }, { "name" : "Thick Frontal_Mid_L", "group" : 7 }, { "name" : "Thick Frontal_Mid_R", "group" : 7 }, { "name" : "Thick Frontal_Mid_Orb_L", "group" : 7 }, { "name" : "Thick Frontal_Mid_Orb_R", "group" : 7 }, { "name" : "Thick Frontal_Inf_Oper_L", "group" : 7 }, { "name" : "Thick Frontal_Inf_Oper_R", "group" : 7 }, { "name" : "Thick Frontal_Inf_Tri_L", "group" : 7 }, { "name" : "Thick Frontal_Inf_Tri_R", "group" : 7 }, { "name" : "Thick Frontal_Inf_Orb_L", "group" : 7 }, { "name" : "Thick Frontal_Inf_Orb_R", "group" : 7 }, { "name" : "Thick Rolandic_Oper_L", "group" : 7 }, { "name" : "Thick Rolandic_Oper_R", "group" : 7 }, { "name" : "Thick Supp_Motor_Area_L", "group" : 7 }, { "name" : "Thick Supp_Motor_Area_R", "group" : 7 }, { "name" : "Thick Olfactory_L", "group" : 7 }, { "name" : "Thick Olfactory_R", "group" : 7 }, { "name" : "Thick Frontal_Sup_Medial_L", "group" : 7 }, { "name" : "Thick Frontal_Sup_Medial_R", "group" : 7 }, { "name" : "Thick Frontal_Med_Orb_L", "group" : 7 }, { "name" : "Thick Frontal_Med_Orb_R", "group" : 7 }, { "name" : "Thick Rectus_L", "group" : 7 }, { "name" : "Thick Rectus_R", "group" : 7 }, { "name" : "Thick Insula_L", "group" : 7 }, { "name" : "Thick Insula_R", "group" : 7 }, { "name" : "Thick Cingulum_Ant_L", "group" : 7 }, { "name" : "Thick Cingulum_Ant_R", "group" : 7 }, { "name" : "Thick Cingulum_Mid_L", "group" : 7 }, { "name" : "Thick Cingulum_Mid_R", "group" : 7 }, { "name" : "Thick Cingulum_Post_L", "group" : 7 }, { "name" : "Thick Cingulum_Post_R", "group" : 7 }, { "name" : "Thick ParaHippocampal_L", "group" : 7 }, { "name" : "Thick ParaHippocampal_R", "group" : 7 }, { "name" : "Thick Calcarine_L", "group" : 7 }, { "name" : "Thick Calcarine_R", "group" : 7 }, { "name" : "Thick Cuneus_L", "group" : 7 }, { "name" : "Thick Cuneus_R", "group" : 7 }, { "name" : "Thick Lingual_L", "group" : 7 }, { "name" : "Thick Lingual_R", "group" : 7 }, { "name" : "Thick Occipital_Sup_L", "group" : 7 }, { "name" : "Thick Occipital_Sup_R", "group" : 7 }, { "name" : "Thick Occipital_Mid_L", "group" : 7 }, { "name" : "Thick Occipital_Mid_R", "group" : 7 }, { "name" : "Thick Occipital_Inf_L", "group" : 7 }, { "name" : "Thick Occipital_Inf_R", "group" : 7 }, { "name" : "Thick Fusiform_L", "group" : 7 }, { "name" : "Thick Fusiform_R", "group" : 7 }, { "name" : "Thick Postcentral_L", "group" : 7 }, { "name" : "Thick Postcentral_R", "group" : 7 }, { "name" : "Thick Parietal_Sup_L", "group" : 7 }, { "name" : "Thick Parietal_Sup_R", "group" : 7 }, { "name" : "Thick Parietal_Inf_L", "group" : 7 }, { "name" : "Thick Parietal_Inf_R", "group" : 7 }, { "name" : "Thick SupraMarginal_L", "group" : 7 }, { "name" : "Thick SupraMarginal_R", "group" : 7 }, { "name" : "Thick Angular_L", "group" : 7 }, { "name" : "Thick Angular_R", "group" : 7 }, { "name" : "Thick Precuneus_L", "group" : 7 }, { "name" : "Thick Precuneus_R", "group" : 7 }, { "name" : "Thick Paracentral_Robule_L", "group" : 7 }, { "name" : "Thick Paracentral_Robule_R", "group" : 7 }, { "name" : "Thick Heschl_L", "group" : 7 }, { "name" : "Thick Heschl_R", "group" : 7 }, { "name" : "Thick Temporal_Sup_L", "group" : 7 }, { "name" : "Thick Temporal_Sup_R", "group" : 7 }, { "name" : "Thick Temporal_Pole_Sup_L", "group" : 7 }, { "name" : "Thick Temporal_Pole_Sup_R", "group" : 7 }, { "name" : "Thick Temporal_Mid_L", "group" : 7 }, { "name" : "Thick Temporal_Mid_R", "group" : 7 }, { "name" : "Thick Temporal_Pole_Mid_L", "group" : 7 }, { "name" : "Thick Temporal_Pole_Mid_R", "group" : 7 }, { "name" : "Thick Temporal_Inf_L", "group" : 7 }, { "name" : "Thick Temporal_Inf_R", "group" : 7 }, { "name" : "CBF Precentral_L", "group" : 8 }, { "name" : "CBF Precentral_R", "group" : 8 }, { "name" : "CBF Frontal_Sup_L", "group" : 8 }, { "name" : "CBF Frontal_Sup_R", "group" : 8 }, { "name" : "CBF Frontal_Sup_Orb_L", "group" : 8 }, { "name" : "CBF Frontal_Sup_Orb_R", "group" : 8 }, { "name" : "CBF Frontal_Mid_L", "group" : 8 }, { "name" : "CBF Frontal_Mid_R", "group" : 8 }, { "name" : "CBF Frontal_Mid_Orb_L", "group" : 8 }, { "name" : "CBF Frontal_Mid_Orb_R", "group" : 8 }, { "name" : "CBF Frontal_Inf_Oper_L", "group" : 8 }, { "name" : "CBF Frontal_Inf_Oper_R", "group" : 8 }, { "name" : "CBF Frontal_Inf_Tri_L", "group" : 8 }, { "name" : "CBF Frontal_Inf_Tri_R", "group" : 8 }, { "name" : "CBF Frontal_Inf_Orb_L", "group" : 8 }, { "name" : "CBF Frontal_Inf_Orb_R", "group" : 8 }, { "name" : "CBF Rolandic_Oper_L", "group" : 8 }, { "name" : "CBF Rolandic_Oper_R", "group" : 8 }, { "name" : "CBF Supp_Motor_Area_L", "group" : 8 }, { "name" : "CBF Supp_Motor_Area_R", "group" : 8 }, { "name" : "CBF Olfactory_L", "group" : 8 }, { "name" : "CBF Olfactory_R", "group" : 8 }, { "name" : "CBF Frontal_Sup_Medial_L", "group" : 8 }, { "name" : "CBF Frontal_Sup_Medial_R", "group" : 8 }, { "name" : "CBF Frontal_Med_Orb_L", "group" : 8 }, { "name" : "CBF Frontal_Med_Orb_R", "group" : 8 }, { "name" : "CBF Rectus_L", "group" : 8 }, { "name" : "CBF Rectus_R", "group" : 8 }, { "name" : "CBF Insula_L", "group" : 8 }, { "name" : "CBF Insula_R", "group" : 8 }, { "name" : "CBF Cingulum_Ant_L", "group" : 8 }, { "name" : "CBF Cingulum_Ant_R", "group" : 8 }, { "name" : "CBF Cingulum_Mid_L", "group" : 8 }, { "name" : "CBF Cingulum_Mid_R", "group" : 8 }, { "name" : "CBF Cingulum_Post_L", "group" : 8 }, { "name" : "CBF Cingulum_Post_R", "group" : 8 }, { "name" : "CBF ParaHippocampal_L", "group" : 8 }, { "name" : "CBF ParaHippocampal_R", "group" : 8 }, { "name" : "CBF Calcarine_L", "group" : 8 }, { "name" : "CBF Calcarine_R", "group" : 8 }, { "name" : "CBF Cuneus_L", "group" : 8 }, { "name" : "CBF Cuneus_R", "group" : 8 }, { "name" : "CBF Lingual_L", "group" : 8 }, { "name" : "CBF Lingual_R", "group" : 8 }, { "name" : "CBF Occipital_Sup_L", "group" : 8 }, { "name" : "CBF Occipital_Sup_R", "group" : 8 }, { "name" : "CBF Occipital_Mid_L", "group" : 8 }, { "name" : "CBF Occipital_Mid_R", "group" : 8 }, { "name" : "CBF Occipital_Inf_L", "group" : 8 }, { "name" : "CBF Occipital_Inf_R", "group" : 8 }, { "name" : "CBF Fusiform_L", "group" : 8 }, { "name" : "CBF Fusiform_R", "group" : 8 }, { "name" : "CBF Postcentral_L", "group" : 8 }, { "name" : "CBF Postcentral_R", "group" : 8 }, { "name" : "CBF Parietal_Sup_L", "group" : 8 }, { "name" : "CBF Parietal_Sup_R", "group" : 8 }, { "name" : "CBF Parietal_Inf_L", "group" : 8 }, { "name" : "CBF Parietal_Inf_R", "group" : 8 }, { "name" : "CBF SupraMarginal_L", "group" : 8 }, { "name" : "CBF SupraMarginal_R", "group" : 8 }, { "name" : "CBF Angular_L", "group" : 8 }, { "name" : "CBF Angular_R", "group" : 8 }, { "name" : "CBF Precuneus_L", "group" : 8 }, { "name" : "CBF Precuneus_R", "group" : 8 }, { "name" : "CBF Paracentral_Robule_L", "group" : 8 }, { "name" : "CBF Paracentral_Robule_R", "group" : 8 }, { "name" : "CBF Heschl_L", "group" : 8 }, { "name" : "CBF Heschl_R", "group" : 8 }, { "name" : "CBF Temporal_Sup_L", "group" : 8 }, { "name" : "CBF Temporal_Sup_R", "group" : 8 }, { "name" : "CBF Temporal_Pole_Sup_L", "group" : 8 }, { "name" : "CBF Temporal_Pole_Sup_R", "group" : 8 }, { "name" : "CBF Temporal_Mid_L", "group" : 8 }, { "name" : "CBF Temporal_Mid_R", "group" : 8 }, { "name" : "CBF Temporal_Pole_Mid_L", "group" : 8 }, { "name" : "CBF Temporal_Pole_Mid_R", "group" : 8 }, { "name" : "CBF Temporal_Inf_L", "group" : 8 }, { "name" : "CBF Temporal_Inf_R", "group" : 8 }, { "name" : "GThick", "group" : 9 }, { "name" : "GCBF", "group" : 10 } ] ; 
+ var width = 550
+height = 400;
+
+var color = d3.scale.category20();
+
+var force = d3.layout.force()
+.nodes(d3.values(nodes)) 
+.links(links) 
+.size([width, height]) 
+.linkDistance(50) 
+.charge(-120) 
+.on("tick", tick) 
+.start(); 
+
+var svg = d3.select("body").append("svg")
+.attr("width", width)
+.attr("height", height)
+.attr("pointer-events", "all")
+.call(d3.behavior.zoom().on("zoom", redraw));
+
+var vis = svg
+.append("svg:g");
+
+vis.append("svg:rect")
+.attr("width", width)
+.attr("height", height)
+.attr("fill", 'white');
+
+function redraw() {
+vis.attr("transform",
+"translate(" + d3.event.translate + ")"
++ " scale(" + d3.event.scale + ")");
+}
+
+var link = vis.selectAll(".link")
+.data(force.links())
+.enter().append("line")
+.attr("class", "link")
+.style("stroke-width", function(d) { return Math.sqrt(d.value); });
+
+var node = vis.selectAll(".node")
+.data(force.nodes())
+.enter().append("g") 
+.attr("class", "node")
+.style("fill", function(d) { return color(d.group); })
+.style("opacity", 0.9)
+.on("mouseover", mouseover) 
+.on("mouseout", mouseout) 
+.call(force.drag);
+
+node.append("circle") 
+.attr("r", 6)
+
+node.append("svg:text")
+.attr("class", "nodetext")
+.attr("dx", 12)
+.attr("dy", ".35em")
+.text(function(d) { return d.name });
+
+function tick() { 
+link 
+.attr("x1", function(d) { return d.source.x; }) 
+.attr("y1", function(d) { return d.source.y; }) 
+.attr("x2", function(d) { return d.target.x; }) 
+.attr("y2", function(d) { return d.target.y; }); 
+
+node.attr("transform", function(d) { return "translate(" + d.x + "," + d.y + ")"; }); 
+} 
+
+function mouseover() { 
+d3.select(this).select("circle").transition() 
+.duration(750) 
+.attr("r", 16);
+d3.select(this).select("text").transition()
+.duration(750)
+.attr("x", 13)
+.style("stroke-width", ".5px")
+.style("font", "17.5px serif")
+.style("opacity", 1); 
+} 
+
+function mouseout() { 
+d3.select(this).select("circle").transition() 
+.duration(750) 
+.attr("r", 8); 
+} 
+
+</script>
+ </body>

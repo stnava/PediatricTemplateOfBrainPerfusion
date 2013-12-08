@@ -4,19 +4,25 @@ data('aal',package='ANTsR')
 library(pheatmap)
 library(e1071)
 thickinds<-c(1:36,39:40,43:70,79:90)
-thickinds<-c(1:70,79:90)
-demog<-read.csv("AAL_demo_thickness.csv")
-cbf<-read.csv("AAL_meancbf.csv")
-demog<-cbind( demog, cbf[,4:ncol(cbf)] )
-thickoff<-23
-cthk<-apply( demog[  , thickinds+thickoff ], MARGIN=1, FUN=mean )
-cbfoff<-23+102
-gcbf<-apply( demog[  , thickinds+cbfoff ], MARGIN=1, FUN=mean )
-demog$Sex[ demog$Sex == "F " ]<-"F"
+demog<-read.csv("demo_thick_cbf.csv")
+demog<-demog[,3:228]
+jhu<-read.csv("JHU_whitematter.csv")
+demog<-cbind(demog,jhu[,4:ncol(jhu)])
+popul<-demog[,1:22]
+thickness<-demog[,grep("Thick",names(demog))]
+thickness <- thickness[,thickinds]
+colnames( thickness )<-c( paste("Thick",aal$label_name[thickinds]) )
+CBF<-demog[,grep("CBF",names(demog))]
+CBF <- CBF[,thickinds]
+colnames( CBF )<-c( paste("CBF",aal$label_name[thickinds]) )
+FA<-demog[,grep("FA",names(demog))]
+MD<-demog[,grep("MD_",names(demog))]
+globmess<-read.csv("global_measures.csv")
+globmess<-globmess[,2:ncol(globmess)]
 usesubs<-rep(TRUE,nrow(demog))
 usesubs[ c(155,142) ] <- FALSE      # for thickness
-usesubs[ c(155,142,which( is.na(gcbf) ),which( gcbf < 10  )) ] <- FALSE  # for cbf
-tempdf<-data.frame( cbind( demog, usesubs ) )
+usesubs[ c(155,142,which( is.na(gcbf) ),which( gcbf < 10  ), which( is.na(jhu$RD_JHU.43) ) )] <- FALSE  # for cbf
+tempdf<-data.frame( cbind( popul, usesubs ) )
 write.csv(tempdf,"good_v_bad_cbf_subjects.csv",row.names=F)
 uids <- unique( demog$SubID )
 for ( i in 1:length(uids) )
@@ -24,10 +30,13 @@ for ( i in 1:length(uids) )
   ww<-which( demog$SubID == uids[i] )
   if ( length( ww ) > 1 ) usesubs[ ww[2:length(ww)] ] <- FALSE
   }
-demog<-demog[usesubs,]
-cthk<-apply( demog[  , thickinds+thickoff ], MARGIN=1, FUN=mean )
-gcbf<-apply( demog[  , thickinds+cbfoff ], MARGIN=1, FUN=mean )
-inclevs<-levels( demog$Income )
+popul<-popul[usesubs,]
+CBF<-CBF[usesubs,]
+FA<-FA[usesubs,]
+MD<-MD[usesubs,]
+thickness<-thickness[usesubs,]
+globmess<-globmess[usesubs,]
+inclevs<-levels( popul$Income )
 inclevs[1]<-NA
 inclevs[2:6]<-110.0
 inclevs[7:9]<-130.0
@@ -45,9 +54,9 @@ inclevs[c(29,33)]<-NA
 inclevs[34]<-15.0
 inclevs[30:31]<-20.0
 inclevs<-as.numeric( inclevs )
-levels( demog$Income )<-( inclevs )
-demog$Income<-as.numeric( as.character( demog$Income ) )
-myincome<-c( impute( cbind(demog$blank,demog$Income ) ) )
+levels( popul$Income )<-( inclevs )
+popul$Income<-as.numeric( as.character( popul$Income ) )
+myincome<-c( impute( cbind(popul$blank,popul$Income ) ) )
 myincome2<-myincome
 myincome2[ myincome >= 120 ]<-6
 myincome2[ myincome <= 120 ]<-5
@@ -55,51 +64,235 @@ myincome2[ myincome <= 90 ]<- 4
 myincome2[ myincome <= 70 ]<- 3
 myincome2[ myincome <= 50 ]<- 2
 myincome2[ myincome <= 20 ]<- 1
-demog<-data.frame( demog , myincome=(myincome) , gcbf=gcbf, tgcbf=(gcbf/cthk) )
-residagainstthickness<-FALSE 
-if ( residagainstthickness ) demog[  , thickinds+cbfoff ]<-as.matrix( residuals( lm( as.matrix(demog[  , thickinds+cbfoff ]) ~ cthk ) ) )
-mdl<-lm( gcbf ~ AgeAtScan * Sex + myincome  , data=demog )
-print( summary( mdl  ) )
-pdf("~/Downloads/cbf_v_income.pdf")
-visreg( mdl , "myincome", main="CBF vs Income" )
-dev.off()
+popul$AgeAtScan <- as.numeric(as.character(popul$AgeAtScan))
+myiq<-( c( impute( cbind( popul$blank, as.numeric(as.character(popul$FullScaleIQ)) ) ) ) )
+myiq2<-( c( impute( cbind( popul$blank, as.numeric(as.character(popul$Verbal.IQ)) ) ) ) )
+myiq3<-( c( impute( cbind( popul$blank, as.numeric(as.character(popul$Performance.IQ)) ) ) ) )
+mylad<-c( impute( cbind( popul$blank, as.numeric(as.character(popul$Teen.Ladder.SES.score ) )   ) ) )
+myladc<-c( impute( cbind( popul$blank, as.numeric(as.character(popul$Teen.Ladder.Community.Score ) )   ) ) )
 ####################################################################################################
-demog$AgeAtScan <- as.numeric(as.character(demog$AgeAtScan))
-myiq<-rank( c( impute( cbind( demog$blank, as.numeric(as.character(demog$FullScaleIQ)) ) ) ) )
-myiq2<-rank( c( impute( cbind( demog$blank, as.numeric(as.character(demog$Verbal.IQ)) ) ) ) )
-mylad<-c( impute( cbind( demog$blank, as.numeric(as.character(demog$Teen.Ladder.SES.score ) )   ) ) )
-myladc<-c( impute( cbind( demog$blank, as.numeric(as.character(demog$Teen.Ladder.Community.Score ) )   ) ) )
 ####################################################################################################
-myoffset<-cbfoff
-myoffset<-thickoff
-mystudyinds<-c(thickinds+cbfoff,thickinds+thickoff)
-if ( FALSE ) {
-# look at k = 5 !
-for ( k in 1:length(mystudyinds) ) 
-  {
-  mdl<-lm( demog[,mystudyinds[k]] ~ 1 + Sex*AgeAtScan +    I(AgeAtScan^2) + myiq  , data = demog  )
-  dd<-stepAIC( mdl , direction = c("both") , trace =  0 )
-  print(summary( lm( formula(dd) , data=demog ) ) )
-  print( paste( k, aal$label_name[mystudyinds][k] ) )
-  Sys.sleep(3)
-  }
+# for ( i in 1:ncol(CBF) ) {
+#   CBF[,i] <- CBF[,i] / thickness[,i] 
+#   }
+FIQ      <- myiq
+VIQ      <- myiq2
+PIQ      <- myiq3
+Ladder  <- ( mylad )
+RIncome <- rank(myincome)
+BV<-globmess$BrainVolume
+myglobal<-globmess[,2:ncol(globmess)]
+brainpreds<-as.matrix(cbind(thickness,CBF,FA,MD,myglobal))/BV
+brainpreds<-as.matrix(cbind(thickness,CBF,FA,MD))/BV
+braingroups<-c( rep( max(mygroups)+1, ncol(thickness) )
+               , rep( max(mygroups)+2, ncol(CBF) )
+               , rep( max(mygroups)+3, ncol(FA) ) 
+               , rep( max(mygroups)+4, ncol(MD) ) ) #, rep( max(mygroups)+5, ncol(myglobal) ) )
+# + I(popul$AgeAtScan^2)
+mylm<-bigLMStats( lm( (brainpreds) ~ VIQ + PIQ + RIncome + popul$Sex * I(popul$AgeAtScan^1)   ) )
+for ( i in 1:nrow(mylm$beta.pval) ) {
+  mylm$beta.pval[i,]<-p.adjust( mylm$beta.pval[i,] , method="BH" )
+  print( paste(row.names(mylm$beta.pval)[i] , min(mylm$beta.pval[i,] )  ) )
 }
-####################################################################################################
-mythk<-as.matrix( cbind( demog[,mystudyinds] ) )
-mythk<-residuals( lm( mythk ~  demog$Sex * demog$AgeAtScan + cthk ) ) 
-tempinc<-cbind(  as.numeric( myiq ) ,as.numeric( myiq2 ) , as.numeric( myincome ) , as.numeric(myincome2), as.numeric( mylad ) , myladc  )
+colnames( mylm$beta.pval )<-colnames(brainpreds)
+mybpcor<-cor( brainpreds )
+mybpcor[  mybpcor  < 0.8 ] <- 0
+mygroups<-c( 1:nrow(mylm$beta.pval) )
+mygroups<-c( mygroups , braingroups )
+myd3<-regressionNetworkViz( mylm , sigthresh=0.05, whichviz="Force", outfile="./PediatricTemplateOfBrainPerfusion/results.html", logvals=T, correlateMyOutcomes = NA, corthresh = 0.85, zoom = T , mygroup=mygroups )
+                                        # myd3<-regressionNetworkViz( mylm , sigthresh=0.05, whichviz="Sankey", outfile="/Users/stnava/Downloads/temp2.html", logvals=T, correlateMyOutcomes = NA, corthresh = 0. , mygroup=mygroups )
+#
+nv1<-2
+nv2<-3 # cca
+myspars<-c( 0.02)
+spar2<-( -0.2 )
+selector<-(rep(c(1:2), nrow(popul) ))
+selector<-sample(selector, nrow(popul) )
+selector<-selector[1:nrow(popul)]
+select1<-selector != 1 
+select2<-selector == 1 
+mypopulp<-cbind(PIQ,RIncome, I(popul$AgeAtScan^1) ) # , I(popul$AgeAtScan^2))
+colnames(mydemogp)[ncol(mydemogp)]<-"Age"
+mydemogp1<-subset(mypopulp,     select1)
+mydemogp2<-subset(mypopulp,     select2)
+brainpreds1<-subset(brainpreds, select1)
+mysvd<-svd(brainpreds1[,])$v[,1:nv]
+brainpreds2<-subset(brainpreds, select2 )
+myresults<-c()
+par(mfrow=c(1,4))
+for ( myspar in myspars  ) {
+myz<-( -1 )
+# esccan<-sparseDecom( inmatrix= (brainpreds1) , nvecs=nv1, its=25, mycoption=0, sparseness=myspar, z=myz, inmask="NA" )
+# mytrainbrain<- brainpreds1 %*% as.matrix( esccan$eigenanatomyimages )
+# mytestbrain <- brainpreds2 %*% as.matrix( esccan$eigenanatomyimages )
+sccan<-sparseDecom2( inmatrix= list(brainpreds1,mydemogp1) , nvecs=nv2, its=55, mycoption=1, sparseness=c(myspar, spar2 ), z=myz )
+mytrainbrain2<- brainpreds1[,] %*% as.matrix( sccan$eig1 )
+mytestbrain2 <- brainpreds2[,] %*% as.matrix( sccan$eig1 )
+mytrainbrain<-cbind(mytrainbrain2,subset(globmess[,c(1:ncol(globmess))],select1))
+mytestbrain<-cbind(mytestbrain2,subset(globmess[,c(1:ncol(globmess))],  select2))
+globinds <- c(2:9,11)
+mytrainbrain<-cbind(mytrainbrain2,subset(globmess[,globinds],select1))
+mytestbrain<-cbind(mytestbrain2,subset(globmess[,globinds],  select2))
+library(randomForest)
+for ( ind in 1:ncol(mypopulp) ) {
+  mydf1        <- data.frame( mycognition=mydemogp1[,ind], imgs = scale( mytrainbrain ), sex=subset(popul$Sex,select1)  ) # , age=subset(popul$AgeAtScan,selector)  )
+  mydf2        <- data.frame(  imgs = scale( mytestbrain ) , sex=subset(popul$Sex,select2) ) # , age=subset(popul$AgeAtScan,!selector) )
+  my.rf        <- randomForest( mycognition ~ . , data=mydf1, ntree = 5000 )
+  mypred <- predict( my.rf , newdata = mydf2 )
+  plot(mypred,mydemogp2[,ind])
+  mycor<-cor.test(mypred,mydemogp2[,ind])
+  myres<-paste(myspar,mycor$est ,mycor$p.value, mean(abs(mypred-mydemogp2[,ind])) )
+  myresults<-c(myresults,myres)
+  if ( ind == 1 ) print( my.rf$importance/sum(my.rf$importance) )
+}
+}
+print( myresults )
+# ww<-which( abs(sccan$eig1[,1]) > 0 )
+# print( colnames(brainpreds)[ww] ) 
+stop("ASSS")
+#################################################
+############### now the test data ###############
+#################################################
+testdatabrain<-scale(brainpreds2) %*% scale(as.matrix(sccan$eig1))
+testdatademog<-scale(mydemogp2) %*% scale(t(sccan$eig2))
+par(mfrow=c(1,3))
+for ( i in 1:3 ) {
+  proj1<-sccan$projections[,i]
+  proj2<-sccan$projections2[,i] 
+  proj1<-testdatabrain[,i]
+  proj2<-testdatademog[,i]
+  ccc<-round( cor.test( proj1 , proj2 )$est * 100 ) / 100
+  mytit<-paste("Eig",as.character(i),"pval",sccan$ccasummary[1,i+1],"cor",ccc )
+  print(mytit)
+  ww<-which( abs(sccan$eig2[,i]) > 0 )
+  print( colnames(mydemogp)[ww] ) 
+  ww<-which( abs(sccan$eig1[,i]) > 0 )
+  print( colnames(brainpreds)[ww] )
+  plot( proj1 ,proj2 , main=mytit ) 
+}
+
+
+
+stop("AAL above")
+# not sure how to achieve this yet
+# fused<-joinEigenanatomy( myothk, NA,  eanat$eigenanatomyimages, graphdensity )
+#
+mycthk<-cbind( residuals( lm(as.matrix(  (demog[,thickinds+thickoff]) )~cthk ) ),  cthk ) 
+mybthk<-cbind( residuals( lm(as.matrix(  (demog[,thickinds+ cbfoff ]) )~gcbf ) ), gcbf ) 
+mycthk<-cbind( as.matrix(  (demog[,thickinds+thickoff]) )/cthk ,  cthk ) 
+mybthk<-cbind( as.matrix(  (demog[,thickinds+ cbfoff ]) )/gcbf , gcbf ) 
+nv<-40; spar<-(0.02)
+ceanat<-sparseDecom( inmatrix= as.matrix(mycthk) , nvecs=nv, its=3, mycoption=0, sparseness=spar, z=myz, inmask="NA" )
+beanat<-sparseDecom( inmatrix= as.matrix(mybthk) , nvecs=nv, its=3, mycoption=0, sparseness=spar, z=myz, inmask="NA" )
+cfused<-joinEigenanatomy( mycthk, NA,  ceanat$eigenanatomyimages, 0.1 )
+bfused<-joinEigenanatomy( mybthk, NA,  beanat$eigenanatomyimages, 0.1 )
+bmyimages <- t( bfused$fusedlist )
+cmyimages <- t( cfused$fusedlist )
+myocthk<-cbind( as.matrix(  (demog[,thickinds+thickoff ]) ) , cthk ) 
+myobthk<-cbind( as.matrix(  (demog[,thickinds+ cbfoff ]) ) , gcbf )
+mybthk<-residuals( lm( myobthk ~ myocthk ) ) 
+mycthk<-residuals( lm( myocthk ~ myobthk ) ) 
+brainpreds<-cbind( mycthk %*% as.matrix( cmyimages ),  mybthk %*% as.matrix( bmyimages ) )
+colnames(brainpreds)<-c(paste("TEanat",1:ncol(cmyimages),sep=''),(paste("CEanat",c(1:ncol(bmyimages)),sep='')))
+mylm<-bigLMStats( lm( (brainpreds) ~ IQ  + RIncome + Ladder + demog$Sex * I(demog$AgeAtScan^1)  ) )
+for ( i in 1:nrow(mylm$beta.pval) ) {
+  mylm$beta.pval[i,]<-p.adjust( mylm$beta.pval[i,] , method="BH" )
+  print( paste(row.names(mylm$beta.pval)[i] , min(mylm$beta.pval[i,] )  ) )
+}
+colnames( mylm$beta.pval )<-colnames(brainpreds)
+mybpcor<-cor( brainpreds )
+mygroups<-c( 1:nrow(mylm$beta.pval) )
+braingroups<-c( rep( max(mygroups)+1, ncol(cmyimages) ),
+                rep( max(mygroups)+2, ncol(bmyimages) ) )
+mygroups<-c( mygroups , braingroups )
+pheatmap( mybpcor,cluster_rows=F,cluster_cols=F)
+myd3<-regressionNetworkViz( mylm , sigthresh=0.05, whichviz="Sankey", outfile="/Users/stnava/Downloads/temp2.html", logvals=T, correlateMyOutcomes = mybpcor, corthresh = 0.5 ) 
+myd3<-regressionNetworkViz( mylm , sigthresh=0.05, whichviz="Sankey", outfile="/Users/stnava/Downloads/temp3.html", logvals=T, correlateMyOutcomes = NA, corthresh = 0.5 ) 
+myd3<-regressionNetworkViz( mylm , sigthresh=0.05, whichviz="Force", outfile="/Users/stnava/Downloads/temp.html", logvals=T, correlateMyOutcomes = NA, corthresh = 0.5 , mygroup=mygroups, zoom=T) 
+
+
+
+stop("Ass")
+
+
+
+mythk<-as.matrix( cbind( scale(demog[,thickinds+thickoff]), scale(demog[,thickinds+cbfoff]) ) )
+myrthk<-residuals( lm( mythk ~   demog$Sex * demog$AgeAtScan + cthk + gcbf  ) ) 
+myrthk<-residuals( lm( mythk ~  cthk + gcbf  ) ) 
+nv<-100; spar<-(0.01)
+eanat<-sparseDecom( inmatrix= as.matrix(myothk) , nvecs=nv, its=3, mycoption=0, sparseness=spar, z=myz, inmask="NA" )
+gds<-c(1:100)/200
+gdvecs <-c()
+for ( graphdensity in gds ) {
+  myimages <- eanat$eigenanatomyimages
+  fused<-joinEigenanatomy( myrthk, NA,  eanat$eigenanatomyimages, graphdensity )
+  gdvecs<-c(gdvecs,dim(fused$fusedlist)[1])
+}
+plot(gds,gdvecs,type='l')
+fused<-joinEigenanatomy( myrthk, NA,  eanat$eigenanatomyimages, 0.05 )
+myimages <- t( fused$fusedlist )
+# myimages<-eanat$eigenanatomyimages
+tempinc<-cbind(  as.numeric( myiq )  ,  as.numeric( mylad ) , rank(myincome)  ) #,
+myglobalpreds<-cbind( cthk, gcbf )
+mylm<-bigLMStats( lm( myglobalpreds ~ tempinc   + demog$Sex * demog$AgeAtScan  + I(demog$AgeAtScan^2)  ) )
+print( mylm$beta.pval )
+brainpreds<-myothk %*% as.matrix( myimages )
+mylm<-bigLMStats( lm( brainpreds ~ tempinc   + demog$Sex * demog$AgeAtScan  + I(demog$AgeAtScan^2) + gcbf + cthk ) )
+print( paste( min(p.adjust( mylm$beta.pval[1,] , method='BH') ), which.min( p.adjust( mylm$beta.pval[1,] , method='BH') )  ) )
+print( paste( min(p.adjust( mylm$beta.pval[2,] , method='BH') ), which.min( p.adjust( mylm$beta.pval[2,] , method='BH') )  ) )
+print( paste( min(p.adjust( mylm$beta.pval[3,] , method='BH') ), which.min( p.adjust( mylm$beta.pval[3,] , method='BH') )  ) )
+ind<-3 ; myimages[which( abs(myimages[,ind]) > 0 ),ind]
+print(which( abs(myimages[,ind]) > 0 ))
+aal$label_name[thickinds][ which(abs( myimages[,ind]) > 0 ) %% length(thickinds) ]
+brainpreds<-myothk %*% as.matrix( myimages )
+mylm<-bigLMStats( lm( brainpreds ~ tempinc   + demog$Sex * demog$AgeAtScan  + I(demog$AgeAtScan^2)  ) )
+colnames(brainpreds)<-paste("Vox",c(1:ncol(brainpreds)),sep='')
+colnames( mylm$beta.pval )<-colnames(brainpreds)
+mybpcor<-cor( brainpreds )
+mybpcor[  mybpcor  < 0.9 ] <- 0
+myd3<-regressionNetworkViz( mylm , sigthresh=0.01, whichviz="Sankey", outfile="/Users/stnava/Downloads/temp2.html", logvals=T, correlateMyOutcomes = mybpcor, corthresh = 0.9 ) 
+myd3<-regressionNetworkViz( mylm , sigthresh=0.01, whichviz="Force", outfile="/Users/stnava/Downloads/temp.html", logvals=T, correlateMyOutcomes = mybpcor, corthresh = 0.9 ) 
+
+
+# now residualize & decompose again 
+brainpreds<-myrthk %*% as.matrix( myimages )
+mylm<-bigLMStats( lm( brainpreds ~ tempinc    + I(demog$AgeAtScan^2)  + demog$Sex * demog$AgeAtScan ) )
+print( paste( min(p.adjust( mylm$beta.pval[1,] , method='BH') ), which.min( p.adjust( mylm$beta.pval[1,] , method='BH') )  ) )
+print( paste( min(p.adjust( mylm$beta.pval[2,] , method='BH') ), which.min( p.adjust( mylm$beta.pval[2,] , method='BH') )  ) )
+print( paste( min(p.adjust( mylm$beta.pval[3,] , method='BH') ), which.min( p.adjust( mylm$beta.pval[3,] , method='BH') )  ) )
+print(dim(myimages))
+ind<-5 ; myimages[which( abs(myimages[,ind]) > 0 ),ind]
+print(which( abs(myimages[,ind]) > 0 ))
+aal$label_name[thickinds][ which(abs( myimages[,ind]) > 0 ) %% length(thickinds) ]
+pheatmap( cor(brainpreds) ,cluster_rows=F,cluster_cols=F)
+################ now some cool visualization with d3 ##########################################
+colnames(brainpreds)<-paste("Vox",c(1:ncol(brainpreds)),sep='')
+colnames( mylm$beta.pval )<-colnames(brainpreds)
+regressionNetworkViz( mylm , sigthresh=0.05, whichviz="Sankey", outfile="/Users/stnava/Downloads/temp2.html") 
+regressionNetworkViz( mylm , sigthresh=0.05, whichviz="Force", outfile="/Users/stnava/Downloads/temp.html") 
+################################################################################################################
+stop("UseEanatAbove")
 nv<-3
-if ( ! exists("np") ) np<-2500
-sparval<-( 0.05 )
+if ( ! exists("np") ) np<-25
+sparval<-( -0.05 ) * length( thickinds ) / length( mystudyinds )
 sccan<-sparseDecom2( inmatrix=list( mythk, as.matrix(tempinc) ) , nvecs=nv, robust=0,
-                    its=40, mycoption=1 ,  perms=np, sparseness=c( sparval , 0.34 ), z=-1, ell1=11 ) # cbf
-print( aal$label_name[thickinds][ abs(sccan$eig1[,1]) > 0 ] )
+                    its=29, mycoption=1 ,  perms=np, sparseness=c( sparval , 0.3 ), z=-1, ell1=11 ) # cbf 
+ww<-which( abs(sccan$eig1[,1]) > 0 )
+print( ww )
+print( sccan$eig1[ww,1] ) 
+print( aal$label_name[thickinds][ ww %% length(thickinds) ] )
 print("&")
-print( aal$label_name[thickinds][ abs(sccan$eig1[,2]) > 0 ] )
+ww<-which( abs(sccan$eig1[,2]) > 0 )
+print( ww )
+print( sccan$eig1[ww,2] )
+print( aal$label_name[thickinds][ ww %% length(thickinds) ] )
 print("&")
-if ( nv > 2 ) print( aal$label_name[thickinds][ abs(sccan$eig1[,3]) > 0 ] )
-mypro1<- mythk %*% as.matrix(sccan$eig1)
-mypro2<- tempinc %*% as.matrix(sccan$eig2)
+ww<-which( abs(sccan$eig1[,3]) > 0 )
+print( ww )
+ print(sccan$eig1[ww,3] )
+print( aal$label_name[thickinds][ ww %% length(thickinds) ] )
+mypro1<- sccan$projections  # mythk %*% as.matrix(sccan$eig1)
+mypro2<- sccan$projections2 # tempinc %*% as.matrix(sccan$eig2)
 print(sccan$eig2)
 if ( length( dev.list() ) == 0 ) dev.new() # dev.off()
 for ( i in 1:nv ) {
@@ -107,6 +300,19 @@ for ( i in 1:nv ) {
   plot( mypro1[,i], mypro2[,i], main=paste("Eig",as.character(i),"pval",sccan$ccasummary[1,i+1],"cor",ccc ) ) 
   Sys.sleep(3)
 }
+stop("Unfinished work below")
+mythk<-as.matrix( cbind( demog[,mystudyinds] ) )
+# mythk<-residuals( lm( mythk ~  demog$Sex * demog$AgeAtScan + I(demog$AgeAtScan^2) + cthk + gcbf ) ) 
+mysvd<-svd(mythk)
+mycor<-cor( mythk, (mysvd$u) )
+pheatmap( mycor ,cluster_rows = F, cluster_cols = F )
+mymeans<-apply(abs(mycor),FUN=mean,M=2)
+mycbfmean1<- mean(abs(mycor[(length(thickinds)+1):(2*length(thickinds)),1]))
+mythkmean1<- mean(abs(mycor[     1               :(1*length(thickinds)),1]))
+mycbfmeans<-apply(abs(mycor[(length(thickinds)+1):(2*length(thickinds)),]),FUN=mean,M=2)
+mythkmeans<-apply(abs(mycor[1               :(1*length(thickinds)),]),FUN=mean,M=2)
+plot(mycbfmeans,type='l')
+points(mythkmeans,type='l',col='red')
 stop("Unfinished work below")
 par(mfrow=c(1,2))
 # demog$Full.4.IQ[ demog$Full.4.IQ == 0 ]<-mean( demog$Full.4.IQ[ demog$Full.4.IQ > 0 ] ,na.rm=T)

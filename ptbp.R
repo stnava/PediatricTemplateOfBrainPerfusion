@@ -108,20 +108,19 @@ mybpcor[  mybpcor  < 0.8 ] <- 0
 myd3<-regressionNetworkViz( mylm , sigthresh=0.05, whichviz="Force", outfile="./PediatricTemplateOfBrainPerfusion/results.html", logvals=T, correlateMyOutcomes = NA, corthresh = 0.85, zoom = T , mygroup=mygroups )
                                         # myd3<-regressionNetworkViz( mylm , sigthresh=0.05, whichviz="Sankey", outfile="/Users/stnava/Downloads/temp2.html", logvals=T, correlateMyOutcomes = NA, corthresh = 0. , mygroup=mygroups )
 #
-nv1<-2
-nv2<-4 # cca
-myspars<-c( 0.02 )
-spar2<-( -0.2 )
-maxtest<-10
+mypopulp<-cbind(PIQ,VIQ, RIncome, I(popul$AgeAtScan^1) ) # , I(popul$AgeAtScan^2))
+maxtest<-6   # kfolds
+testind<-2   # which predictor
+maxnruns<-10 # number of sub-samples in model building 
+myspars<-c( 0.02 )  # select about 1 to 2% of predictors 
+nv2<-ncol(mypopulp) # cca sparsevectors
+spar2<-( -1.0/nv2 * 0.9  )
 whichpreds<-rep(0,ncol(brainpreds))
 ntests <- c(1:maxtest)
-mypopulp<-cbind(PIQ,VIQ, RIncome, I(popul$AgeAtScan^1) ) # , I(popul$AgeAtScan^2))
-testind<-2
 cvpredictions<-matrix( rep(NA,nrow(brainpreds)*ncol(mypopulp)) , ncol=ncol(mypopulp) )
 selector<-(rep(ntests, nrow(popul) ))
 selector<-sample(selector, nrow(popul) )
 selector<-selector[1:nrow(popul)]
-maxnruns<-10
 for ( myrun in 1:maxnruns ) {
   for ( whichtotest in 1:(maxtest/2) ) {
     select1<-( selector != whichtotest & selector < (maxtest/2) )
@@ -171,7 +170,7 @@ for ( myrun in 1:maxnruns ) {
 
 dev.new()
 par(mfrow=c(1,1))
-ww<-which( whichpreds > 5 ) # max(whichpreds)*0.33
+ww<-which( whichpreds > max(whichpreds)*0.1 )
 brainpredsSub<-brainpreds[,ww]
 select1 <- selector <  (maxtest/2) 
 select2 <- selector >= (maxtest/2) 

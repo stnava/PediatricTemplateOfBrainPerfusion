@@ -19,13 +19,15 @@ colnames( CBF )<-c( paste("CBF",aal$label_name[thickinds]) )
 FA<-demog[,grep("FA",names(demog))]
 MD<-demog[,grep("MD_",names(demog))]
 boldin<-read.csv("AAL_BoldConn.csv")
-boldin<-boldin[,c(4,95:ncol(boldin))]
+boldin<-boldin[,c(95:ncol(boldin))]
+boldin<-boldin[,thickinds]
+boldin<-impute(boldin)
 gbold<-apply(boldin,FUN=mean,MARGIN=1)
 globmess<-read.csv("global_measures.csv")
 globmess<-globmess[,2:ncol(globmess)]
 usesubs<-rep(TRUE,nrow(demog))
 usesubs[ c(155,142) ] <- FALSE      # for thickness
-usesubs[ c(155,142,which( is.na(gbold) ),which( is.na(gcbf) ),which( gcbf < 10  ), which( is.na(jhu$RD_JHU.43) ) )] <- FALSE  # for cbf
+usesubs[ c(155,142,which( is.na(gcbf) ),which( gcbf < 10  ), which( is.na(jhu$RD_JHU.43) ) )] <- FALSE  # for cbf
 tempdf<-data.frame( cbind( popul, usesubs ) )
 write.csv(tempdf,"good_v_bad_cbf_subjects.csv",row.names=F)
 uids <- unique( demog$SubID )
@@ -39,6 +41,7 @@ CBF<-CBF[usesubs,]
 FA<-FA[usesubs,]
 MD<-MD[usesubs,]
 bold<-boldin[usesubs,]
+gbold<-apply(bold,FUN=mean,MARGIN=1)
 thickness<-thickness[usesubs,]
 globmess<-globmess[usesubs,]
 inclevs<-levels( popul$Income )
@@ -77,9 +80,6 @@ mylad<-c( impute( cbind( popul$blank, as.numeric(as.character(popul$Teen.Ladder.
 myladc<-c( impute( cbind( popul$blank, as.numeric(as.character(popul$Teen.Ladder.Community.Score ) )   ) ) )
 ####################################################################################################
 ####################################################################################################
-# for ( i in 1:ncol(CBF) ) {
-#   CBF[,i] <- CBF[,i] / thickness[,i] 
-#   }
 FIQ      <- myiq
 VIQ      <- myiq2
 PIQ      <- myiq3
@@ -88,19 +88,21 @@ RIncome <- rank(myincome)
 BV<-globmess$BrainVolume
 myglobal<-globmess[,2:ncol(globmess)]
 brainpreds<-as.matrix(cbind(thickness,CBF,FA,MD,myglobal))/BV
-brainpreds<-as.matrix(cbind(thickness,CBF,FA,myglobal,bold))/BV
+brainpreds<-as.matrix(cbind(thickness,CBF/BV,MD,bold,myglobal))
+brainpreds<-as.matrix(cbind(thickness/myglobal$GrayThickness,CBF/myglobal$GrayCBF,FA,MD,bold))
 # + I(popul$AgeAtScan^2)
-mylm<-bigLMStats( lm( (brainpreds) ~ VIQ + PIQ + RIncome + Ladder + popul$Sex * I(popul$AgeAtScan^1)   ) )
+mylm<-bigLMStats( lm( (brainpreds) ~  FIQ + PIQ + VIQ  + Ladder  + popul$Sex * I(popul$AgeAtScan^1)   ) )
 for ( i in 1:nrow(mylm$beta.pval) ) {
   mylm$beta.pval[i,]<-p.adjust( mylm$beta.pval[i,] , method="BH" )
   print( paste(row.names(mylm$beta.pval)[i] , min(mylm$beta.pval[i,] )  ) )
 }
+# stop("Regression")
 colnames( mylm$beta.pval )<-colnames(brainpreds)
 mygroups<-c( 1:nrow(mylm$beta.pval) )
 braingroups<-c( rep( max(mygroups)+1, ncol(thickness) )
                , rep( max(mygroups)+2, ncol(CBF) )
                , rep( max(mygroups)+3, ncol(FA) ) 
-               , rep( max(mygroups)+4, ncol(myglobal) ) 
+               , rep( max(mygroups)+4, ncol(MD) ) 
                , rep( max(mygroups)+5, ncol(bold) ) ) #, rep( max(mygroups)+5, ncol(myglobal) ) )
 mygroups<-c( mygroups , braingroups )
 mybpcor<-cor( brainpreds )
@@ -108,88 +110,96 @@ mybpcor[  mybpcor  < 0.8 ] <- 0
 myd3<-regressionNetworkViz( mylm , sigthresh=0.05, whichviz="Force", outfile="./PediatricTemplateOfBrainPerfusion/results.html", logvals=T, correlateMyOutcomes = NA, corthresh = 0.85, zoom = T , mygroup=mygroups )
                                         # myd3<-regressionNetworkViz( mylm , sigthresh=0.05, whichviz="Sankey", outfile="/Users/stnava/Downloads/temp2.html", logvals=T, correlateMyOutcomes = NA, corthresh = 0. , mygroup=mygroups )
 #
-mypopulp<-cbind(PIQ,VIQ, RIncome, I(popul$AgeAtScan^1) ) # , I(popul$AgeAtScan^2))
-maxtest<-6   # kfolds
+# stop("Regression")
+#
+myz<-( -1 )
+mypopulp<-data.frame( FIQ=FIQ, PIQ=PIQ, VIQ=VIQ*(-1),Ladder, Age=I(popul$AgeAtScan^1), Gen=as.factor(popul$Sex) ) # , I(popul$AgeAtScan^2))
+maxtest<-8  # kfolds
 testind<-2   # which predictor
-maxnruns<-10 # number of sub-samples in model building 
+maxnruns<-40  # number of bootstrap runs in model building 
 myspars<-c( 0.02 )  # select about 1 to 2% of predictors 
 nv2<-ncol(mypopulp) # cca sparsevectors
-spar2<-( -1.0/nv2 * 0.9  )
+spar2<-( -0.5 )
 whichpreds<-rep(0,ncol(brainpreds))
 ntests <- c(1:maxtest)
 cvpredictions<-matrix( rep(NA,nrow(brainpreds)*ncol(mypopulp)) , ncol=ncol(mypopulp) )
 selector<-(rep(ntests, nrow(popul) ))
-selector<-sample(selector, nrow(popul) )
 selector<-selector[1:nrow(popul)]
+selector<-sample(selector, nrow(popul) ) # bootstrap 
+maxtestval<-maxtest/2
+if ( maxtestval != maxtest ) modselector<-( selector %% maxtestval ) + 1 else modselector<-selector
 for ( myrun in 1:maxnruns ) {
-  for ( whichtotest in 1:(maxtest/2) ) {
-    select1<-( selector != whichtotest & selector < (maxtest/2) )
-    select1<-sample(select1) 
-    select2<-!select1
-    colnames(mypopulp)[ncol(mypopulp)]<-"Age"
-    mydemogp1<-subset(mypopulp,     select1)
-    mydemogp2<-subset(mypopulp,     select2)
-    brainpreds1<-subset(brainpreds, select1)
+  modselector<-sample(modselector)
+  for ( whichtotest in 1:maxtestval ) {
+    select1<-(  ( modselector !=  whichtotest ) & ( selector < (maxtestval+1) ) )
+    select2<-(  ( modselector ==  whichtotest ) & ( selector < (maxtestval+1) ) )
+    mydemogp1 <- subset(mypopulp,   select1 )
+    mydemogp2 <- subset(mypopulp,   select2 )
+    brainpreds1<-subset(brainpreds, select1 )
     brainpreds2<-subset(brainpreds, select2 )
     myresults<-c()
     for ( myspar in myspars  ) {
-      myz<-( -1 )
-      sccan<-sparseDecom2( inmatrix= list(brainpreds1,mydemogp1) , nvecs=nv2, its=55, mycoption=1, sparseness=c(myspar, spar2 ), z=myz )
-      mytrainbrain2<- brainpreds1[,] %*% as.matrix( sccan$eig1 )
-      mytestbrain2 <- brainpreds2[,] %*% as.matrix( sccan$eig1 )
+      mymat<-data.matrix(mydemogp1)
+      sccan<-sparseDecom2( inmatrix=list(brainpreds1,mymat) , nvecs=nv2, its=15, mycoption=1, sparseness=c(myspar, spar2 ), z=myz )
+      eigpreds<-sccan$eig1
+#      sccan<-sparseDecom( inmatrix= scale(brainpreds1) , nvecs=10, its=3, mycoption=0, sparseness=myspar, z=-1, inmask="NA" ) ;      eigpreds<-sccan$eigenanatomyimages
+      mytrainbrain2<- brainpreds1[,] %*% as.matrix( eigpreds )
+      mytestbrain2 <- brainpreds2[,] %*% as.matrix( eigpreds )
       mytrainbrain<-cbind(mytrainbrain2)
       mytestbrain<-cbind(mytestbrain2) 
       library(randomForest)
       for ( ind in 1:ncol(mypopulp) ) {
         mydf1        <- data.frame( mycognition=mydemogp1[,ind], imgs = scale( mytrainbrain ), sex=subset(popul$Sex,select1)  ) 
         mydf2        <- data.frame(  imgs = scale( mytestbrain ) , sex=subset(popul$Sex,select2) ) 
-        my.rf        <- randomForest( mycognition ~ . , data=mydf1, ntree = 5000 )
+        my.rf        <- randomForest( mycognition ~ . , data=mydf1 )
         mypred <- predict( my.rf , newdata = mydf2 )
-        plot(mypred,mydemogp2[,ind])
-        mycor<-cor.test(mypred,mydemogp2[,ind])
-        myres<-paste(myspar,mycor$est ,mycor$p.value, mean(abs(mypred-mydemogp2[,ind])) )
+#        plot(mypred,mydemogp2[,ind])
+        myres<-paste(myspar, mean(abs(mypred-as.numeric(mydemogp2[,ind]))) )
         myresults<-c(myresults,myres)
         if ( ind == testind ) {
-          ww<-which( abs(sccan$eig1[,which.max(my.rf$importance[1:ncol(mypopulp)] )]) > 0 )
-          whichpreds[ww]<-whichpreds[ww]+1
+          wmax<-which.max(my.rf$importance[1:ncol(mypopulp)] )
+          ww<-which( abs(eigpreds[,wmax]) > 0 )
+          whichpreds[ww]<-whichpreds[ww]+1 # abs(eigpreds[ww,wmax]) 
         }
         cvpredictions[select2,ind]<-mypred
+        print(myres)
       }
     }
-                                        # print( myresults )
   }
   par(mfrow=c(1,ncol(mypopulp)))
   for ( ind in 1:ncol(mypopulp) ) {
-    plot(cvpredictions[,ind],mypopulp[,ind])
-    mycor<-cor.test(cvpredictions[,ind],mypopulp[,ind])
-    myres<-paste(myspar,mycor$est ,mycor$p.value, mean(abs(cvpredictions[,ind]-mypopulp[,ind])) )
-    print(myres)
+#    plot(cvpredictions[,ind],mypopulp[,ind])
+#    mycor<-cor.test(cvpredictions[,ind],mypopulp[,ind])
+    myres<-paste(myspar, mean(abs(cvpredictions[,ind]-mypopulp[,ind])) )
+#    print(myres)
   }
   print(paste("Run",myrun))
 } # myrun
-
-dev.new()
+# print( myresults )
+# stop("ASSS")
+if ( length( dev.list() ) == 0 ) dev.new() # dev.off()
 par(mfrow=c(1,1))
-ww<-which( whichpreds > max(whichpreds)*0.1 )
+wpgt0<-whichpreds>0
+npreds<- round(maxnruns*0.5)
+# npreds<-6
+ww<-which( whichpreds > npreds ) # ) #( median(whichpreds[wpgt0])+sd(whichpreds[wpgt0])*1) )
 brainpredsSub<-brainpreds[,ww]
-select1 <- selector <  (maxtest/2) 
-select2 <- selector >= (maxtest/2) 
+select1 <- selector <  (maxtestval+1) 
+select2 <- selector >= (maxtestval+1) 
 mydemogp1<-subset(mypopulp,     select1 )
 mydemogp2<-subset(mypopulp,     select2 )
-globinds<-c(2:ncol(globmess))
-globinds<-c(3,5)
 brainpreds1<-cbind( subset(brainpredsSub, select1 ) )
 brainpreds2<-cbind( subset(brainpredsSub, select2 ) )
-mydf2        <- data.frame(  imgs = scale( brainpreds2 )  )
-mydf1        <- data.frame( mycognition=mydemogp1[,testind], imgs = scale( brainpreds1 ) )
-my.rf        <- randomForest( mycognition ~ . , data=mydf1, ntree = 5000 )
+mydf1        <- data.frame( imgs = scale( brainpreds1 ) , mycognition=(mydemogp1[,testind]) )
+mydf2        <- data.frame( imgs = scale( brainpreds2 )   )
+my.rf        <- randomForest( mycognition ~ . , data=mydf1 )
 mypred <- predict( my.rf , newdata = mydf2 )
 plot(mypred,mydemogp2[,testind])
 mycor<-cor.test(mypred,mydemogp2[,testind])
 myres<-paste(myspar,mycor$est ,mycor$p.value, mean(abs(mypred-mydemogp2[,testind])) )
 print( my.rf$importance/sum(my.rf$importance) )
 print(myres)
-
+# print(whichpreds)
 stop("ASSS")
 #################################################
 ############### now the test data ###############
@@ -250,8 +260,6 @@ pheatmap( mybpcor,cluster_rows=F,cluster_cols=F)
 myd3<-regressionNetworkViz( mylm , sigthresh=0.05, whichviz="Sankey", outfile="/Users/stnava/Downloads/temp2.html", logvals=T, correlateMyOutcomes = mybpcor, corthresh = 0.5 ) 
 myd3<-regressionNetworkViz( mylm , sigthresh=0.05, whichviz="Sankey", outfile="/Users/stnava/Downloads/temp3.html", logvals=T, correlateMyOutcomes = NA, corthresh = 0.5 ) 
 myd3<-regressionNetworkViz( mylm , sigthresh=0.05, whichviz="Force", outfile="/Users/stnava/Downloads/temp.html", logvals=T, correlateMyOutcomes = NA, corthresh = 0.5 , mygroup=mygroups, zoom=T) 
-
-
 
 stop("Ass")
 

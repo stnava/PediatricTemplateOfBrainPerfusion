@@ -18,6 +18,28 @@ doboot<-T
 data('aal',package='ANTsR')
 thickinds<-c(1:36,39:40,43:70,79:90)
 demog<-read.csv("demo_thick_cbf.csv")
+#########################################    
+pedulev<-levels(demog$Father.Education)
+pedulevmod<-c(NA,16,NA,20,12,8,NA,NA,22,NA,20,14,14,18,10)
+pedumod<-as.numeric( demog$Father.Education )
+for ( i in 1:length(pedulev) ) pedumod[ demog$Father.Education == pedulev[i] ]<- pedulevmod[i]
+# pedumod[ pedumod == pedulev[1]  |  pedumod == pedulev[3]  |  pedumod == pedulev[7] |  pedumod == pedulev[8] |  pedumod == pedulev[10] ]<-NA
+# pedumod[ pedumod == pedulev[4]  |  pedumod == pedulev[9]  |  pedumod == pedulev[11] |  pedumod == pedulev[14] ]<-pedulev[2] # pedulev[4]  # gradschool
+# pedumod[ pedumod == pedulev[12] |  pedumod == pedulev[13] ]<-pedulev[2] # college 
+# pedumod[ pedumod == pedulev[15] |  pedumod == pedulev[6]  ]<-pedulev[5] # high school
+#########################################    
+edulev<-levels(demog$Mother.Education)
+edulevmod<-c(16,16,16,NA,18,20,12,12,NA,NA,14,14,14,14,18)
+edumod<-as.numeric( demog$Mother.Education )
+for ( i in 1:length(edulev) ) edumod[ demog$Mother.Education == edulev[i] ]<- edulevmod[i]
+# edumod<-demog$Mother.Education
+# edumod[ demog$Mother.Education == edulev[2] | demog$Mother.Education == edulev[3]  ]<-edulev[1] # college
+# edumod[ demog$Mother.Education == edulev[11] | demog$Mother.Education == edulev[12] | demog$Mother.Education == edulev[5] |
+#        demog$Mother.Education == edulev[13] | demog$Mother.Education == edulev[14] ]<-edulev[1] # edulev[5] # grad school edulev[12]
+# edumod[ demog$Mother.Education == edulev[4] | demog$Mother.Education == edulev[9]  | demog$Mother.Education == edulev[10] ]<-NA 
+# edumod[ demog$Mother.Education == edulev[5] | demog$Mother.Education == edulev[6] | demog$Mother.Education == edulev[15] ]<-edulev[1]
+# edumod[ demog$Mother.Education == edulev[7] | demog$Mother.Education == edulev[8] ]<-edulev[7] # high school
+#########################################
 demog<-demog[,3:228]
 jhu<-read.csv("JHU_whitematter.csv")
 demog<-cbind(demog,jhu[,4:ncol(jhu)])
@@ -53,6 +75,8 @@ for ( i in 1:length(uids) )
   if ( length( ww ) > 1 ) usesubs[ ww[2:length(ww)] ] <- FALSE
   }
 popul<-popul[usesubs,]
+popul$Mother.Education<-edumod[usesubs]
+popul$Father.Education<-pedumod[usesubs]
 CBF<-CBF[usesubs,]
 FA<-FA[usesubs,]
 MD<-MD[usesubs,]
@@ -70,8 +94,8 @@ inclevs[1]<-NA
 inclevs[2:6]<-110.0
 inclevs[7:9]<-130.0
 inclevs[10:11]<-150.0
-inclevs[12]<-170.0
-inclevs[13]<-190.0
+inclevs[12]<-170 # 170.0
+inclevs[13]<-190 # 190.0
 inclevs[c(14:17,19,20,32)]<-210.0
 inclevs[18]<-35.0
 inclevs[21:22]<-50.0
@@ -80,7 +104,7 @@ inclevs[24:25]<-70.0
 inclevs[26]<-85.0
 inclevs[27:28]<-90.0
 inclevs[c(29,33)]<-NA
-inclevs[34]<-15.0
+inclevs[34]<-30.0
 inclevs[30:31]<-20.0
 inclevs<-as.numeric( inclevs )
 levels( popul$Income )<-( inclevs )
@@ -110,8 +134,8 @@ gbold<-apply(as.matrix(bold),FUN=mean,MARGIN=1)
 gcbf<-apply(as.matrix(CBF),FUN=mean,MARGIN=1)
 BV<-globmess$BrainVolume
 globmess<-cbind( globmess, gbold )
-myglobal<-globmess
-mygroups<-c( 1:6 )  # nrow(mylm$beta.pval) )
+myglobal<-globmess[,1:ncol(globmess)]
+mygroups<-c( 1:7 ) # nrow(mylm$beta.pval) )
 if ( ! usebold ) {
 brainpreds<-as.matrix(cbind(thickness,CBF,FA,MD))/BV
 braingroups<-c( rep( max(mygroups)+1, ncol(thickness) )
@@ -119,9 +143,9 @@ braingroups<-c( rep( max(mygroups)+1, ncol(thickness) )
                , rep( max(mygroups)+3, ncol(FA) ) 
                , rep( max(mygroups)+4, ncol(MD) ) ) #, rep( max(mygroups)+5, ncol(myglobal) ) )
 } else {
-brainpreds<-as.matrix(cbind(thickness/myglobal$GrayThickness,CBF/myglobal$GrayCBF,MD/myglobal$WhiteMD,bold/gbold,myglobal))
-brainpreds<-as.matrix(cbind(thickness/myglobal$GrayThickness,CBF/BV,MD/BV,bold/BV,myglobal))
-brainpreds<-as.matrix(cbind(thickness/BV,                    CBF/BV,MD/BV,bold/BV,myglobal))
+# brainpreds<-as.matrix(cbind(thickness/myglobal$GrayThickness,CBF/myglobal$GrayCBF,MD/myglobal$WhiteMD,bold/gbold,myglobal))
+# brainpreds<-as.matrix(  cbind(thickness/BV,                    CBF/BV,              MD/BV,bold/BV,myglobal))
+brainpreds<-as.matrix(  cbind(thickness  ,                     CBF   ,              MD   , bold/gbold ,  myglobal))
 braingroups<-c( rep( max(mygroups)+1, ncol(thickness) )  
                , rep( max(mygroups)+2, ncol(CBF)  )  
                , rep( max(mygroups)+3, ncol(FA) ) 
@@ -129,29 +153,39 @@ braingroups<-c( rep( max(mygroups)+1, ncol(thickness) )
 # brainpreds<-bold # as.matrix(residuals( lm( bold ~ gbold) ) )
 # braingroups<-c( rep( max(mygroups)+1, ncol(brainpreds) )  )
 }
-whichmodality<-157:204
+# whichmodality<-157:204
+# whichmodality<-1:78
+# whichmodality<-205:282
 whichmodality<-1:ncol(brainpreds)
-mylm<-bigLMStats( lm( (brainpreds) ~  PIQ + VIQ   + Ladder  + popul$Sex * I(popul$AgeAtScan^1)  ) ) # + I(popul$AgeAtScan^2)  ) )
+matEdu<-popul$Mother.Education
+matEdu[ is.na( matEdu ) ]<-mean( matEdu , na.rm=T )
+patEdu<-popul$Father.Education
+patEdu[ is.na( patEdu ) ]<-mean( patEdu , na.rm=T )
+sumEdu<-matEdu+patEdu
+subjAge<-I(popul$AgeAtScan^1)
+subjAge2<-I(popul$AgeAtScan^2)
+gender<-as.factor(popul$Sex)
+mylm<-bigLMStats( lm( (brainpreds) ~  gender * subjAge + patEdu + matEdu + myincome2 + FIQ ) )
 for ( i in 1:nrow(mylm$beta.pval) ) {
   locpv<-p.adjust( mylm$beta.pval[i,whichmodality] , method="BH" )
   print( paste(row.names(mylm$beta.pval)[i] , min( locpv )  ) )
-  siglocpv<-locpv[ locpv <= 0.05 ]
+  siglocpv<- mylm$beta.pval[i,whichmodality][ locpv <= 0.05 ]
+#  siglocpv<- locpv[ locpv <= 0.05 ]
   signifregions<-names( siglocpv )
   signifregions<-signifregions[ order( siglocpv ) ]
   siglocpv<-siglocpv[ order( siglocpv ) ]
   if ( min( siglocpv ) < 0.05 ) {
       print( paste( signifregions , collapse=" / ") )
       signifregions<-factor(signifregions,levels=(signifregions),ordered=TRUE)
-      dfn<-data.frame( OutcomeNames=signifregions , LogQVals=log(siglocpv))
-      tit<-paste("Log Q-values for Significant Regions:",row.names(mylm$beta.pval)[i])
+      dfn<-data.frame( OutcomeNames=signifregions , LogpVals=log(siglocpv))
+      tit<-paste("Log p-values for Significant Regions:",row.names(mylm$beta.pval)[i])
       pdf(paste(row.names(mylm$beta.pval)[i],'_qvals.pdf',sep=''),width=7,height=4)
-      print( ggplot(dfn, aes(x=OutcomeNames,y=LogQVals) ) + ggtitle(tit)
+      print( ggplot(dfn, aes(x=OutcomeNames,y=LogpVals) ) + ggtitle(tit)
             + theme(plot.title = element_text(size = rel(2)))
             + geom_boxplot() +  theme(text = element_text(size=8), axis.text.x = element_text(angle=90, vjust=1)) )
       dev.off()
   }
-}
-
+}    
 # make some heatmaps of the data 
 pdf('heatmap_thick.pdf',width=7)
 pheatmap( cor( thickness ) , cluster_rows = F, cluster_cols = F,show_colnames = T,show_rownames = T, fontsize=6 )
@@ -172,8 +206,7 @@ dev.off()
 brainpredssub<-as.matrix(cbind(thickness/myglobal$GrayThickness,CBF/globmess$GrayCBF,MD/globmess$WhiteMD,bold/gbold,myglobal))
 pdf('heatmap_all2.pdf',width=7)
 pheatmap( cor( brainpredssub ) , cluster_rows = F, cluster_cols = F,show_colnames = T,show_rownames = T, fontsize=6 )
-dev.off()
-    
+dev.off()    
 colnames(votedbrainregions1)<-names(brainpreds)
 colnames(votedbrainregions2)<-names(brainpreds)
 colnames( mylm$beta.pval )<-colnames(brainpreds)
@@ -181,9 +214,8 @@ mybpcor<-cor( brainpreds )
 mybpcor[  mybpcor  < 0.8 ] <- 0
 mygroups<-c( 1:nrow(mylm$beta.pval) )
 mygroups<-c( mygroups , braingroups )
-myd3<-regressionNetworkViz( mylm , sigthresh=0.05, whichviz="Force", outfile="./PediatricTemplateOfBrainPerfusion/results.html", logvals=T, correlateMyOutcomes = NA, corthresh = 0.85, zoom = T , mygroup=mygroups )
+myd3<-regressionNetworkViz( mylm , sigthresh=0.001, whichviz="Force", outfile="./PediatricTemplateOfBrainPerfusion/results.html", logvals=T, correlateMyOutcomes = NA, corthresh = 0.85, zoom = T , mygroup=mygroups )
 lddf<-data.frame( thick=brainpreds[,15],  PIQ=PIQ , VIQ=VIQ   , Ladder=Ladder ,Sex=popul$Sex , age=popul$AgeAtScan )
-lddf
 mdl<-lm( thick ~ .,data=lddf )
 # print( summary( mdl ) )
 # visreg(mdl)
